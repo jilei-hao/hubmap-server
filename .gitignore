@@ -1,7 +1,7 @@
 .idea/
 .vscode/
 node_modules/
-TestData/
+temp_data/
 build
 .DS_Store
 *.tgz
