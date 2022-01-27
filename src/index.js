@@ -1,5 +1,14 @@
 'use strict'
 
+/* 
+  ===============================================================
+    HuBMAP Server
+    v1.0
+    
+    
+  ==============================================================
+*/
+
 import { createServer } from 'http';
 import { parse } from 'url';
 import { readFileSync, existsSync, mkdirSync } from 'fs';
@@ -31,6 +40,20 @@ function validateQuery(q) {
     return true;
 }
 
+// Return a read stream to the input file
+function composeFileStream(fn, res) {
+    const stat = fs.statSync(fn);
+
+    res.writeHead(200, {
+        'Content-Type': 'model/vtp',
+        'Content-Length': stat.size,
+        "Content-Disposition": "attachment; filename=Ovary.vtp"
+    });
+
+    const readStream = fs.createReadStream(fn);
+    readStream.pipe(res);
+}
+
 
 const server = createServer((req, res) => {
     const q = parse(req.url, true).query;
@@ -38,27 +61,25 @@ const server = createServer((req, res) => {
 
     if (validateQuery(q)) {
         // if the query string is valid, start parsing and execution
-        const ns = q['ns'], nr = q['nr'], d = q['d'], h = q['h'], w = q['w'];
+        const ns = q['ns'], nr = q['nr'], d = q['d'], h = q['h'];
+        let w = q['w'];
+
+        /*
+        // temporarily stripping /index.json from the query
+        w = w.substring(0, w.indexOf('/'));
+        console.log('stripped w: ', w);
+        */
+
         const cwd = process.cwd();
         const outDir = path.join(cwd, 'public', 'temp_data', `mesh_${ns}_${nr}_${d}_${h}_${w}`);
-        const fnMesh = path.join(outDir, 'Ovary.vtk');
+        const fnMesh = path.join(outDir, 'Ovary.vtp');
         //console.log('outDir: ', outDir);
 
         // if directory exists, return existing file
         if (existsSync(fnMesh)) {
             console.log(`${fnMesh} already exists! Responding with file in the cache.`);
 
-            const stat = fs.statSync(fnMesh);
-
-            res.writeHead(200, {
-                'Content-Type': 'model/vtk',
-                'Content-Length': stat.size,
-                "Content-Disposition": "attachment; filename=Ovary.vtk"
-            });
-
-            const readStream = fs.createReadStream(fnMesh);
-            readStream.pipe(res);
-
+            const readStream = composeFileStream(fnMesh, res);
             return;
         }
 
@@ -74,21 +95,13 @@ const server = createServer((req, res) => {
         // execute the command in a child process
         exec(cmd, (err, stdout, stderr) => {
             if (err) { return; }
-            console.log(`stdout:\n ${stdout}`);
+            console.log(`stdout:\n ${stdout}`); 
             console.log(`stderr:\n ${stderr}`);
 
-            // respond with file created
-            const stat = fs.statSync(fnMesh);
-
-            res.writeHead(200, {
-                'Content-Type': 'model/vtk',
-                'Content-Length': stat.size,
-                "Content-Disposition": "attachment; filename=Ovary.vtk"
-            });
-
-            const readStream = fs.createReadStream(fnMesh);
-            readStream.pipe(res);
+            const readStream = composeFileStream(fnMesh, res);
         });
+    } else {
+        console.log("Invalid Query Received!");
     }
 });
 
