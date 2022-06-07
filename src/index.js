@@ -17,7 +17,7 @@ import path from 'path';
 import process from 'process';
 import fs from 'fs';
 
-const hostname = '192.168.4.23';
+const hostname = 'localhost';
 const port = 3000;
 const version = 'v1.0.0'
 
